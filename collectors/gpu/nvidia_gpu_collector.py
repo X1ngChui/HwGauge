@@ -1,3 +1,4 @@
+import logging
 from typing import List, Tuple, Sequence
 
 from prometheus_client import CollectorRegistry
@@ -20,6 +21,8 @@ from pynvml import (
 from collectors.gpu.gpu_collector import GPUCollector, GPULabel, GPUMetrics
 
 
+logger = logging.getLogger(__name__)
+
 class NvidiaGPUCollector(GPUCollector):
     """Collector for NVIDIA GPU metrics using NVML."""
 
@@ -27,20 +30,15 @@ class NvidiaGPUCollector(GPUCollector):
         super().__init__(registry)
         self.gpu_count: int = 0
 
-    def initialize(self) -> None:
+    def _initialize(self) -> None:
         """Initialize NVML and create metrics. Raise exception on failure."""
         nvmlInit()
         self.gpu_count = nvmlDeviceGetCount()
-        self.initialized = True
-        print(f"Initialized NVIDIA GPU collector with {self.gpu_count} GPU(s)")
+        logger.info(f"Initialized NVIDIA GPU collector with {self.gpu_count} GPU(s)")
 
     def sample(self) -> Sequence[tuple[GPULabel, GPUMetrics]]:
         """Collect GPU metrics from all devices."""
-        if not self.initialized:
-            print("Sampling Nvidia GPU before initialization")
-            return []
-
-        samples: List[Tuple[GPULabel, GPUMetrics]] = []
+        collections: List[Tuple[GPULabel, GPUMetrics]] = []
         for index in range(self.gpu_count):
             handle = nvmlDeviceGetHandleByIndex(index)
 
@@ -66,11 +64,9 @@ class NvidiaGPUCollector(GPUCollector):
                 power_usage=power_usage,
             )
 
-            samples.append((label, metrics))
-        return samples
+            collections.append((label, metrics))
+        return collections
 
-    def cleanup(self) -> None:
+    def _cleanup(self) -> None:
         """Cleanup NVML resources."""
-        if self.initialized:
-            nvmlShutdown()
-            self.initialized = False
+        nvmlShutdown()

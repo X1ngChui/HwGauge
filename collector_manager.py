@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -8,6 +9,7 @@ from collectors import COLLECTORS
 from collectors.base_collector import BaseCollector
 from config import CollectorConfig
 
+logger = logging.getLogger(__name__)
 
 class CollectorManager:
     """Manages all hardware collectors."""
@@ -36,30 +38,32 @@ class CollectorManager:
             try:
                 collector.initialize()
                 self.collectors[collector_name] = collector
-                print(f"Enabled collector: {collector_name}")
+                logger.info(f"Enabled collector: {collector_name}")
             except Exception as e:
-                print(f"Failed to initialize {collector_name}: {e}")
+                logger.error(f"Failed to initialize {collector_name}: {e}")
 
     def collect_all(self) -> None:
         """Run collection for all active collectors."""
         for name, collector in self.collectors.items():
             try:
+                logger.info(f"Collecting {name}")
                 collector.collect()
             except Exception as e:
-                print(f"Error in {name} collector: {e}")
+                logger.error(f"Error in {name} collector: {e}")
 
     def cleanup_all(self) -> None:
         """Cleanup all collectors."""
         for name, collector in self.collectors.items():
             try:
+                logger.info(f"Cleaning up {name}")
                 collector.cleanup()
             except Exception as e:
-                print(f"Error cleaning up {name}: {e}")
+                logger.error(f"Error cleaning up {name}: {e}")
 
     def run_collection_loop(self) -> None:
         """Run the main collection loop using APScheduler."""
         interval = self.config.collect_interval
-        print(f"Starting collection loop (interval: {interval}s)")
+        logger.info(f"Starting collection loop (interval: {interval}s)")
 
         self.scheduler.add_job(
             self.collect_all,
@@ -73,7 +77,7 @@ class CollectorManager:
         try:
             self.scheduler.start()
         except KeyboardInterrupt:
-            print("\nReceived interrupt signal")
+            logger.info("\nReceived interrupt signal")
         finally:
             self.scheduler.shutdown(wait=False)
             self.cleanup_all()

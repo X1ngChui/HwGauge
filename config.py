@@ -1,6 +1,7 @@
+import logging
 import tomllib
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Literal
 
 from collectors import COLLECTORS
 
@@ -22,11 +23,17 @@ class CollectorConfig:
                 f"Invalid collectors in config: {sorted(invalid)}. "
             )
 
+@dataclass
+class LoggingConfig:
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
 
 @dataclass
 class AppConfig:
     exporter: ExporterConfig
     collector: CollectorConfig
+    logging: LoggingConfig
 
 
 def load_config(path: str) -> AppConfig:
@@ -36,4 +43,5 @@ def load_config(path: str) -> AppConfig:
     return AppConfig(
         exporter=ExporterConfig(**raw.get("exporter", {})),
         collector=CollectorConfig(**raw.get("collector", {})),
+        logging=LoggingConfig(**raw.get("logging", {})),
     )

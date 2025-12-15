@@ -7,3 +7,6 @@ collect_interval = 1.0  # in seconds
 # Options:
 # - nvidia_gpu_collector
 enabled_collectors = ["nvidia_gpu_collector"]
+
+[logging]
+level = "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL

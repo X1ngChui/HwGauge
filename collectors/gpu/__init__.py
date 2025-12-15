@@ -1,0 +1,2 @@
+from .gpu_collector import GPUCollector
+from .nvidia_gpu_collector import NvidiaGPUCollector

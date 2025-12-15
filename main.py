@@ -1,10 +1,11 @@
 import argparse
+import logging
 import sys
 
 from prometheus_client import CollectorRegistry, start_http_server
 
 from collector_manager import CollectorManager
-from config import load_config
+from config import load_config, LoggingConfig
 
 
 def parse_args() -> argparse.Namespace:
@@ -12,12 +13,19 @@ def parse_args() -> argparse.Namespace:
         description="Hardware Prometheus Exporter"
     )
     parser.add_argument(
-        "-c",
-        "--config",
+        "-c", "--config",
         default="config.toml",
         help="Path to configuration file (default: config.toml)",
     )
     return parser.parse_args()
+
+def configure_logging(log_config: LoggingConfig) -> logging.Logger:
+    logging.basicConfig(
+        level=log_config.level,
+        format=log_config.format,
+        stream=sys.stdout
+    )
+    return logging.getLogger("main")
 
 
 def main() -> None:
@@ -27,9 +35,10 @@ def main() -> None:
     # Load configuration
     try:
         config = load_config(args.config)
-    except Exception as exc:
-        print(f"Failed to load config '{args.config}': {exc}", file=sys.stderr)
-        sys.exit(1)
+    except Exception:
+        return
+
+    logger = configure_logging(config.logging)
 
     # Create registry
     registry = CollectorRegistry(auto_describe=True)
@@ -38,14 +47,10 @@ def main() -> None:
     manager = CollectorManager(registry, config.collector)
     manager.initialize_collectors()
 
-    if not manager.collectors:
-        print("Error: No collectors were initialized", file=sys.stderr)
-        sys.exit(1)
-
     # Start HTTP server
     start_http_server(config.exporter.port, registry=registry)
-    print(f"Exporter listening on port {config.exporter.port}")
-    print(
+    logger.info(f"Collector started on port {config.exporter.port}")
+    logger.info(
         f"Metrics available at "
         f"http://localhost:{config.exporter.port}/metrics"
     )

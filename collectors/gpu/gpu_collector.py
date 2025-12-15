@@ -4,7 +4,7 @@ from typing import Sequence
 
 from prometheus_client import CollectorRegistry, Gauge
 
-from collectors import BaseCollector
+from ..base_collector import BaseCollector
 
 
 @dataclass
@@ -70,11 +70,13 @@ class GPUCollector(BaseCollector):
 
     @abstractmethod
     def sample(self) -> Sequence[tuple[GPULabel, GPUMetrics]]:
-        """Sample GPU metrics."""
+        """Collect GPU metrics."""
         pass
 
-    def collect(self) -> None:
+    def _collect(self) -> None:
         """Collect hardware data and update metrics."""
+        assert self.initialized
+
         for (label, metrics) in self.sample():
             self.utilization.labels(*astuple(label)).set(metrics.utilization)
             self.gpu_frequency.labels(*astuple(label)).set(metrics.frequency)
