@@ -1,0 +1,9 @@
+[exporter]
+port = 8000
+
+[collector]
+collect_interval = 1.0  # in seconds
+
+# Options:
+# - gpu_nvdia
+enabled_collectors = ["gpu_nvidia"]
