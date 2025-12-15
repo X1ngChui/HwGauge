@@ -8,16 +8,11 @@ class BaseCollector(ABC):
 
     def __init__(self, registry: CollectorRegistry) -> None:
         self.registry = registry
-        self._initialized = False
+        self.initialized = False
 
     @abstractmethod
     def initialize(self) -> None:
         """Initialize the hardware interface and metrics."""
-        pass
-
-    @abstractmethod
-    def collect(self) -> None:
-        """Collect hardware data and update metrics."""
         pass
 
     @abstractmethod
@@ -29,3 +24,8 @@ class BaseCollector(ABC):
     def name(self) -> str:
         """Return the collector name."""
         return self.__class__.__name__
+
+    @abstractmethod
+    def collect(self) -> None:
+        """Collect hardware data and update metrics."""
+        pass

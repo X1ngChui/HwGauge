@@ -1,9 +1,9 @@
 from typing import Type
 
-from collectors.base import BaseCollector
-from collectors.gpu_nvidia import NvidiaGPUCollector
+from .base_collector import BaseCollector
+from collectors.gpu.nvidia_gpu_collector import NvidiaGPUCollector
 
 # Import all collectors here
 COLLECTORS: dict[str, Type[BaseCollector]] = {
-    "gpu_nvidia": NvidiaGPUCollector,
+    "nvidia_gpu_collector": NvidiaGPUCollector,
 }

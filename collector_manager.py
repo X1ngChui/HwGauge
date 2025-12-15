@@ -5,7 +5,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from prometheus_client import CollectorRegistry
 
 from collectors import COLLECTORS
-from collectors.base import BaseCollector
+from collectors.base_collector import BaseCollector
 from config import CollectorConfig
 
 
