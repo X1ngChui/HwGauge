@@ -9,10 +9,12 @@ from pynvml import (
     nvmlDeviceGetUUID,
     nvmlDeviceGetName,
     nvmlDeviceGetUtilizationRates,
+    nvmlDeviceGetClockInfo,
     nvmlDeviceGetMemoryInfo,
     nvmlDeviceGetTemperature,
     nvmlDeviceGetPowerUsage,
     NVML_TEMPERATURE_GPU,
+    NVML_CLOCK_SM,
     NVMLError,
 )
 
@@ -28,6 +30,7 @@ class NvidiaGPUCollector(BaseCollector):
 
         # Metrics
         self.gpu_utilization: Optional[Gauge] = None
+        self.gpu_frequency: Optional[Gauge] = None
         self.gpu_memory_used: Optional[Gauge] = None
         self.gpu_memory_total: Optional[Gauge] = None
         self.gpu_temperature: Optional[Gauge] = None
@@ -47,6 +50,13 @@ class NvidiaGPUCollector(BaseCollector):
             self.gpu_utilization = Gauge(
                 "gpu_utilization_percent",
                 "GPU utilization percentage",
+                label_names,
+                registry=self.registry,
+            )
+
+            self.gpu_frequency = Gauge(
+                "gpu_frequency_hz",
+                "GPU frequency hz",
                 label_names,
                 registry=self.registry,
             )
@@ -102,12 +112,14 @@ class NvidiaGPUCollector(BaseCollector):
                 gpu_name = nvmlDeviceGetName(handle)
 
                 util = nvmlDeviceGetUtilizationRates(handle)
+                freq = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_SM) * 1e6  # MHz -> Hz
                 mem = nvmlDeviceGetMemoryInfo(handle)
                 temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
                 power = nvmlDeviceGetPowerUsage(handle) / 1000.0  # mW -> W
 
                 labels = (str(i), gpu_uuid, gpu_name)
                 self.gpu_utilization.labels(*labels).set(util.gpu)
+                self.gpu_frequency.labels(*labels).set(freq)
                 self.gpu_memory_used.labels(*labels).set(mem.used)
                 self.gpu_memory_total.labels(*labels).set(mem.total)
                 self.gpu_temperature.labels(*labels).set(temp)

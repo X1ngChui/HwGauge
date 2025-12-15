@@ -51,11 +51,7 @@ def main() -> None:
     )
 
     # Run collection loop
-    try:
-        manager.run_collection_loop()
-    except KeyboardInterrupt:
-        print("Shutting down exporter...")
-
+    manager.run_collection_loop()
 
 if __name__ == "__main__":
     main()
