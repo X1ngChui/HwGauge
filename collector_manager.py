@@ -77,7 +77,7 @@ class CollectorManager:
         try:
             self.scheduler.start()
         except KeyboardInterrupt:
-            logger.info("\nReceived interrupt signal")
+            logger.info("Received interrupt signal")
         finally:
             self.scheduler.shutdown(wait=False)
             self.cleanup_all()

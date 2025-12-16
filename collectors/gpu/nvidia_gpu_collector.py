@@ -42,11 +42,9 @@ class NvidiaGPUCollector(GPUCollector):
         for index in range(self.gpu_count):
             handle = nvmlDeviceGetHandleByIndex(index)
 
-            uuid = nvmlDeviceGetUUID(handle)
             name = nvmlDeviceGetName(handle)
             label = GPULabel(
                 index=index,
-                uuid=uuid,
                 name=name,
             )
 

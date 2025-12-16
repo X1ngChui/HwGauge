@@ -10,7 +10,6 @@ from ..base_collector import BaseCollector
 @dataclass
 class GPULabel:
     index: int
-    uuid: str
     name: str
 
     @classmethod
@@ -70,7 +69,7 @@ class GPUCollector(BaseCollector):
 
     @abstractmethod
     def sample(self) -> Sequence[tuple[GPULabel, GPUMetrics]]:
-        """Collect GPU metrics."""
+        """Sample GPU metrics."""
         pass
 
     def _collect(self) -> None:
