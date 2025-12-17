@@ -5,7 +5,7 @@ from typing import Sequence, Tuple
 from prometheus_client import CollectorRegistry, Gauge
 
 from .cpu_collector import CPUCollector, CPULabel, CPUMetrics
-import pcm_binding
+from . import pcm_binding
 
 # =========================
 # Collector
