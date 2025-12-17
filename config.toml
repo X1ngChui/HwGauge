@@ -5,8 +5,12 @@ port = 8000
 collect_interval = 1.0  # in seconds
 
 # Options:
+# - intel_cpu_collector
 # - nvidia_gpu_collector
-enabled_collectors = ["nvidia_gpu_collector"]
+enabled_collectors = [
+    "intel_cpu_collector",
+    "nvidia_gpu_collector"
+]
 
 [logging]
 level = "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
