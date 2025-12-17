@@ -1,11 +1,10 @@
-# intel_cpu_collector.py
-from dataclasses import dataclass, astuple, fields
 from typing import Sequence, Tuple
 
-from prometheus_client import CollectorRegistry, Gauge
+from prometheus_client import CollectorRegistry
 
-from .cpu_collector import CPUCollector, CPULabel, CPUMetrics
 from . import pcm_binding
+from .cpu_collector import CPUCollector, CPULabel, CPUMetrics
+
 
 # =========================
 # Collector
@@ -19,12 +18,7 @@ class IntelCPUCollector(CPUCollector):
         self._pcm = pcm_binding.PCMWrapper()
 
     def _cleanup(self) -> None:
-        # 如果 pcm_binding 有 close / cleanup 接口可以在这里调用
         self._pcm = None
-
-    # =========================
-    # Sampling
-    # =========================
 
     def sample(self) -> Sequence[Tuple[CPULabel, CPUMetrics]]:
         assert self._pcm is not None

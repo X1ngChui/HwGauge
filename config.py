@@ -1,4 +1,3 @@
-import logging
 import tomllib
 from dataclasses import dataclass, field
 from typing import List, Literal
@@ -22,6 +21,7 @@ class CollectorConfig:
             raise ValueError(
                 f"Invalid collectors in config: {sorted(invalid)}. "
             )
+
 
 @dataclass
 class LoggingConfig:

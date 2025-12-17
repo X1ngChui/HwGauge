@@ -19,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     )
     return parser.parse_args()
 
+
 def configure_logging(log_config: LoggingConfig) -> logging.Logger:
     logging.basicConfig(
         level=log_config.level,

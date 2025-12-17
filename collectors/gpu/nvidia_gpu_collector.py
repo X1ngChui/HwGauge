@@ -7,7 +7,6 @@ from pynvml import (
     nvmlShutdown,
     nvmlDeviceGetCount,
     nvmlDeviceGetHandleByIndex,
-    nvmlDeviceGetUUID,
     nvmlDeviceGetName,
     nvmlDeviceGetUtilizationRates,
     nvmlDeviceGetClockInfo,
@@ -20,8 +19,8 @@ from pynvml import (
 
 from collectors.gpu.gpu_collector import GPUCollector, GPULabel, GPUMetrics
 
-
 logger = logging.getLogger(__name__)
+
 
 class NvidiaGPUCollector(GPUCollector):
     """Collector for NVIDIA GPU metrics using NVML."""

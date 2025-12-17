@@ -11,6 +11,7 @@ from config import CollectorConfig
 
 logger = logging.getLogger(__name__)
 
+
 class CollectorManager:
     """Manages all hardware collectors."""
 
