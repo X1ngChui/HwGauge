@@ -47,7 +47,7 @@ endif()
 
 # Add Intel PCM libraryc
 if(HWGAUGE_USE_INTEL_PCM)
-    target_link_libraries(HwGauge PRIVATE pcm-lib)
+    target_link_libraries(HwGauge PRIVATE PCM_STATIC)
     target_include_directories(HwGauge PRIVATE ../vendors/pcm/src)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_INTEL_PCM=1)
 

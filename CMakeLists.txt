@@ -150,5 +150,6 @@ set(ENABLE_PUSH OFF CACHE BOOL "Disable prometheus-cpp push" FORCE)
 add_subdirectory(vendors/prometheus-cpp)
 
 if(HWGAUGE_USE_INTEL_PCM)
+    set(PCM_BUILD_EXECUTABLES OFF CACHE BOOL "Disable Intel PCM utilities" FORCE)
     add_subdirectory(vendors/pcm)
 endif()
