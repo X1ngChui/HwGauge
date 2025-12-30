@@ -144,6 +144,11 @@ add_subdirectory(HwGauge)
 add_subdirectory(vendors/spdlog)
 add_subdirectory(vendors/CLI11)
 
+set(ENABLE_TESTING OFF CACHE BOOL "Disable prometheus-cpp testing" FORCE)
 set(ENABLE_COMPRESSION OFF CACHE BOOL "Disable prometheus-cpp compression" FORCE)
 set(ENABLE_PUSH OFF CACHE BOOL "Disable prometheus-cpp push" FORCE)
 add_subdirectory(vendors/prometheus-cpp)
+
+if(HWGAUGE_USE_INTEL_PCM)
+    add_subdirectory(vendors/pcm)
+endif()

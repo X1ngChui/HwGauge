@@ -47,19 +47,8 @@ endif()
 
 # Add Intel PCM libraryc
 if(HWGAUGE_USE_INTEL_PCM)
-    set(PCM_INCLUDE_DIR "/usr/local/src/pcm/src")
-    set(PCM_LIBRARY     "/usr/local/src/pcm/build/libpcm.so")
-
-    message(STATUS "Using hard-coded PCM path:")
-    message(STATUS "  include = ${PCM_INCLUDE_DIR}")
-    message(STATUS "  library = ${PCM_LIBRARY}")
-
-    if(NOT EXISTS ${PCM_LIBRARY})
-        message(FATAL_ERROR "PCM library not found at ${PCM_LIBRARY}")
-    endif()
-
-    target_include_directories(HwGauge PRIVATE ${PCM_INCLUDE_DIR})
-    target_link_libraries(HwGauge PRIVATE ${PCM_LIBRARY})
+    target_link_libraries(HwGauge PRIVATE pcm-lib)
+    target_include_directories(HwGauge PRIVATE ../vendors/pcm/src)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_INTEL_PCM=1)
 
 endif()

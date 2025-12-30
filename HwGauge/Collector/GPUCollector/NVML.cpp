@@ -69,8 +69,8 @@ namespace hwgauge {
 			}
 
 			GPULabel label = {
-				.index = index,
-				.name = std::string(name.data())
+				index,
+				std::string(name.data())
 			};
 
 			labels.emplace_back(std::move(label));
@@ -130,11 +130,11 @@ namespace hwgauge {
 			double power_usage = power / 1e3;  // mW -> W
 
 			metrics.emplace_back(GPUMetrics{
-					.gpuUtilization = gpuUtilization,
-					.memoryUtilization = memoryUtilization,
-					.gpuFrequency = gpuFrequency,
-					.memoryFrequency = memFrequency,
-					.powerUsage = power_usage
+					gpuUtilization,
+					memoryUtilization,
+					gpuFrequency,
+					memFrequency,
+					power_usage
 				});
 		}
 

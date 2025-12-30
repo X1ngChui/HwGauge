@@ -80,7 +80,7 @@ namespace hwgauge {
             break;
 
         default:
-            throw std::runtime_error("PCM init failed: " + std::to_string(int(status))));
+            throw std::runtime_error("PCM init failed: " + std::to_string(int(status)));
         }
 
         initialized = true;
@@ -111,8 +111,8 @@ namespace hwgauge {
 
         for (pcm::uint32 s = 0; s < numSockets; ++s)
             labels.push_back(CPULabel{
-                .index = s,
-                .name = "Socket {}" + std::to_string(s)
+                s,
+                "Socket {}" + std::to_string(s)
                 });
 
         return labels;
