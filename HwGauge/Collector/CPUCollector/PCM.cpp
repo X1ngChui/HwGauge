@@ -112,7 +112,7 @@ namespace hwgauge {
         for (pcm::uint32 s = 0; s < numSockets; ++s)
             labels.push_back(CPULabel{
                 s,
-                "Socket {}" + std::to_string(s)
+                "Socket " + std::to_string(s)
                 });
 
         return labels;
@@ -164,8 +164,8 @@ namespace hwgauge {
             double readBytes = pcm::getBytesReadFromMC(before, after);
             double writeBytes = pcm::getBytesWrittenToMC(before, after);
 
-            m.memoryReadBandwidth = readBytes / elapsed;
-            m.memoryWriteBandwidth = writeBytes / elapsed;
+            m.memoryReadBandwidth = readBytes / 1e6 / elapsed;  // B/s -> MB/s
+            m.memoryWriteBandwidth = writeBytes / 1e6 / elapsed;  // B/s -> MB/s 
 
             metrics.push_back(m);
         }
