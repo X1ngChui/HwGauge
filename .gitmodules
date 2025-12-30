@@ -1,0 +1,9 @@
+[submodule "vendors/prometheus-cpp"]
+	path = vendors/prometheus-cpp
+	url = https://github.com/jupp0r/prometheus-cpp.git
+[submodule "vendors/CLI11"]
+	path = vendors/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
+[submodule "vendors/spdlog"]
+	path = vendors/spdlog
+	url = https://github.com/gabime/spdlog.git

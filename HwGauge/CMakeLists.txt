@@ -1,0 +1,58 @@
+# HwGauge/CMakeLists.txt: CMake configuration for HwGauge with NVML support
+cmake_minimum_required(VERSION 3.25)
+
+# Components Options
+option(HWGAUGE_USE_INTEL_PCM "Enable collectors for Intel CPUs" ON)
+option(HWGAUGE_USE_NVML "Enable collectors for Nvidia GPUs" ON)
+
+# Collect source files
+file(GLOB_RECURSE HWGAUGE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cxx"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
+)
+
+file(GLOB_RECURSE HWGAUGE_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.hxx"
+)
+
+# Create executable target
+add_executable(HwGauge ${HWGAUGE_SOURCES} ${HWGAUGE_HEADERS})
+
+# Set target properties
+set_target_properties(HwGauge PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    OUTPUT_NAME "hwgauge"
+)
+
+# Include directories
+target_include_directories(HwGauge PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Add Intel PCM library
+if(HWGAUGE_USE_INTEL_PCM)
+endif()
+
+# Add NVML library
+if(HWGAUGE_USE_NVML)
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(HwGauge PRIVATE CUDA::nvml)
+endif()
+
+# Add spdlog library
+target_link_libraries(HwGauge PRIVATE spdlog::spdlog)
+
+# Add CLI11 library
+target_link_libraries(HwGauge PRIVATE CLI11::CLI11)
+
+# Add prometheus-cpp library
+target_link_libraries(HwGauge PRIVATE prometheus-cpp::pull)
