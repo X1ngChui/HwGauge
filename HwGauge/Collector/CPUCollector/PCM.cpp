@@ -1,5 +1,6 @@
 #include "PCM.hpp"
 #include "cpucounters.h"
+
 #include <format>
 #include <stdexcept>
 #include <thread>
@@ -7,174 +8,175 @@
 
 namespace hwgauge {
 
-	PCM::PCM() : initialized(false), pcmInstance(nullptr)
-	{
-		initializePCM();
-	}
+    PCM::PCM() {
+        initializePCM();
+    }
 
-	PCM::~PCM()
-	{
-		if (initialized) {
-			cleanupPCM();
-		}
-	}
+    PCM::~PCM() {
+        if (initialized)
+            cleanupPCM();
+    }
 
-	PCM::PCM(PCM&& other) noexcept
-		: initialized(other.initialized),
-		pcmInstance(other.pcmInstance),
-		beforeState(std::move(other.beforeState)),
-		afterState(std::move(other.afterState))
-	{
-		other.initialized = false;
-		other.pcmInstance = nullptr;
-	}
+    PCM::PCM(PCM&& other) noexcept
+        : initialized(other.initialized),
+        pcmInstance(other.pcmInstance),
+        beforeState(std::move(other.beforeState)),
+        afterState(std::move(other.afterState)),
+        beforeTime(other.beforeTime)
+    {
+        other.initialized = false;
+        other.pcmInstance = nullptr;
+    }
 
-	PCM& PCM::operator=(PCM&& other) noexcept
-	{
-		if (this != &other)
-		{
-			if (initialized)
-			{
-				cleanupPCM();
-			}
+    PCM& PCM::operator=(PCM&& other) noexcept {
+        if (this != &other) {
+            if (initialized)
+                cleanupPCM();
 
-			initialized = other.initialized;
-			pcmInstance = other.pcmInstance;
-			beforeState = std::move(other.beforeState);
-			afterState = std::move(other.afterState);
+            initialized = other.initialized;
+            pcmInstance = other.pcmInstance;
+            beforeState = std::move(other.beforeState);
+            afterState = std::move(other.afterState);
+            beforeTime = other.beforeTime;
 
-			other.initialized = false;
-			other.pcmInstance = nullptr;
-		}
+            other.initialized = false;
+            other.pcmInstance = nullptr;
+        }
+        return *this;
+    }
 
-		return *this;
-	}
+    /* ---------- helpers ---------- */
 
-	void PCM::initializePCM()
-	{
-		pcmInstance = pcm::PCM::getInstance();
+    void PCM::snapshot(std::vector<pcm::SocketCounterState>& out)
+    {
+        out.clear();
+        out.reserve(pcmInstance->getNumSockets());
 
-		if (!pcmInstance) {
-			throw std::runtime_error("PCM: Failed to get PCM instance");
-		}
+        for (pcm::uint32 s = 0; s < pcmInstance->getNumSockets(); ++s)
+            out.push_back(pcmInstance->getSocketCounterState(s));
+    }
 
-		// Program PCM counters
-		pcm::PCM::ErrorCode status = pcmInstance->program();
+    /* ---------- init ---------- */
 
-		switch (status) {
-		case pcm::PCM::Success:
-			break;
-		case pcm::PCM::MSRAccessDenied:
-			throw std::runtime_error("PCM: Access to CPU counters denied. Try running with elevated privileges.");
-		case pcm::PCM::PMUBusy:
-			// Try to reset and reprogram
-			pcmInstance->resetPMU();
-			status = pcmInstance->program();
-			if (status != pcm::PCM::Success) {
-				throw std::runtime_error("PCM: PMU busy and reset failed");
-			}
-			break;
-		default:
-			throw std::runtime_error(std::format("PCM: Initialization failed with error code: {}", static_cast<int>(status)));
-		}
+    void PCM::initializePCM()
+    {
+        pcmInstance = pcm::PCM::getInstance();
+        if (!pcmInstance)
+            throw std::runtime_error("PCM: Failed to get PCM instance");
 
-		initialized = true;
+        auto status = pcmInstance->program();
 
-		// Initialize beforeState with current counters
-		uint32 numSockets = pcmInstance->getNumSockets();
-		beforeState.reserve(numSockets);
-		afterState.reserve(numSockets);
+        switch (status) {
+        case pcm::PCM::Success:
+            break;
 
-		for (uint32 i = 0; i < numSockets; ++i) {
-			beforeState.push_back(pcmInstance->getSocketCounterState(i));
-		}
-	}
+        case pcm::PCM::MSRAccessDenied:
+            throw std::runtime_error(
+                "PCM: Access to CPU counters denied. Run with privileges.");
 
-	void PCM::cleanupPCM()
-	{
-		if (pcmInstance) {
-			pcmInstance->cleanup();
-			pcmInstance = nullptr;
-		}
-		initialized = false;
-	}
+        case pcm::PCM::PMUBusy:
+            pcmInstance->resetPMU();
+            if (pcmInstance->program() != pcm::PCM::Success)
+                throw std::runtime_error("PCM: PMU busy and reset failed");
+            break;
 
-	std::vector<CPULabel> PCM::labels()
-	{
-		if (!initialized || !pcmInstance) {
-			throw std::runtime_error("PCM: Not initialized");
-		}
+        default:
+            throw std::runtime_error(
+                std::format("PCM init failed: {}", int(status)));
+        }
 
-		std::vector<CPULabel> labels;
-		uint32 numSockets = pcmInstance->getNumSockets();
+        initialized = true;
 
-		for (uint32 socketId = 0; socketId < numSockets; ++socketId) {
-			CPULabel label = {
-				.index = socketId,
-				.name = std::format("Socket {}", socketId)
-			};
-			labels.push_back(label);
-		}
+        // Prime baseline snapshot
+        snapshot(beforeState);
+        beforeTime = std::chrono::steady_clock::now();
+    }
 
-		return labels;
-	}
+    void PCM::cleanupPCM()
+    {
+        if (pcmInstance)
+            pcmInstance->cleanup();
 
-	std::vector<CPUMetrics> PCM::sample()
-	{
-		if (!initialized || !pcmInstance) {
-			throw std::runtime_error("PCM: Not initialized");
-		}
+        pcmInstance = nullptr;
+        initialized = false;
+    }
 
-		std::vector<CPUMetrics> metrics;
-		uint32 numSockets = pcmInstance->getNumSockets();
+    /* ---------- labels ---------- */
 
-		// Update afterState with current counters
-		afterState.clear();
-		for (uint32 i = 0; i < numSockets; ++i) {
-			afterState.push_back(pcmInstance->getSocketCounterState(i));
-		}
+    std::vector<CPULabel> PCM::labels()
+    {
+        if (!initialized || !pcmInstance)
+            throw std::runtime_error("PCM: Not initialized");
 
-		// Calculate metrics for each socket
-		for (uint32 socketId = 0; socketId < numSockets; ++socketId) {
-			const auto& before = beforeState[socketId];
-			const auto& after = afterState[socketId];
+        std::vector<CPULabel> labels;
+        auto numSockets = pcmInstance->getNumSockets();
 
-			CPUMetrics m;
+        for (pcm::uint32 s = 0; s < numSockets; ++s)
+            labels.push_back(CPULabel{
+                .index = int(s),
+                .name = std::format("Socket {}", s)
+                });
 
-			// CPU Frequency (MHz)
-			// Get average frequency across all cores in the socket
-			m.cpuFrequency = getActiveAverageFrequency(before, after);
+        return labels;
+    }
 
-			// C-State Residencies (%)
-			// C0 is the active state, C6 is a deep sleep state
-			m.c0Residency = getCoreCStateResidency(0, before, after) * 100.0;
-			m.c6Residency = getCoreCStateResidency(6, before, after) * 100.0;
+    /* ---------- sampling ---------- */
 
-			// CPU Power Usage (Watts)
-			// Package power consumption
-			m.powerUsage = getConsumedJoules(before, after);
+    std::vector<CPUMetrics> PCM::sample()
+    {
+        if (!initialized || !pcmInstance)
+            throw std::runtime_error("PCM: Not initialized");
 
-			// Memory Bandwidth (MB/s)
-			// DRAM read and write bandwidth
-			double readBytes = getBytesReadFromMC(before, after);
-			double writeBytes = getBytesWrittenToMC(before, after);
+        snapshot(afterState);
+        auto afterTime = std::chrono::steady_clock::now();
 
-			// Convert from bytes to MB/s
-			// The bandwidth functions return bytes per time interval
-			m.memoryReadBandwidth = readBytes / (1024.0 * 1024.0);
-			m.memoryWriteBandwidth = writeBytes / (1024.0 * 1024.0);
+        double elapsed =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
+                afterTime - beforeTime).count();
 
-			// Memory Power Usage (Watts)
-			// DRAM power consumption
-			m.memoryPowerUsage = getDRAMConsumedJoules(before, after);
+        std::vector<CPUMetrics> metrics;
+        auto numSockets = pcmInstance->getNumSockets();
 
-			metrics.push_back(m);
-		}
+        for (pcm::uint32 s = 0; s < numSockets; ++s)
+        {
+            const auto& before = beforeState[s];
+            const auto& after = afterState[s];
 
-		// Update beforeState for next sample
-		beforeState = afterState;
+            CPUMetrics m{};
 
-		return metrics;
-	}
+            /* ===== Frequency (Hz, averaged active) ===== */
+            m.cpuFrequency =
+                pcm::getActiveAverageFrequency(before, after);
+
+            /* ===== C-state (%) ===== */
+            m.c0Residency =
+                100.0 * pcm::getPackageCStateResidency(0, before, after);
+
+            m.c6Residency =
+                100.0 * pcm::getPackageCStateResidency(6, before, after);
+
+            /* ===== Power (W) ===== */
+            m.powerUsage =
+                pcm::getConsumedJoules(before, after) / elapsed;
+
+            m.memoryPowerUsage =
+                pcm::getDRAMConsumedJoules(before, after) / elapsed;
+
+            /* ===== Memory BW (Bytes/s) ===== */
+            double readBytes = pcm::getBytesReadFromMC(before, after);
+            double writeBytes = pcm::getBytesWrittenToMC(before, after);
+
+            m.memoryReadBandwidth = readBytes / elapsed;
+            m.memoryWriteBandwidth = writeBytes / elapsed;
+
+            metrics.push_back(m);
+        }
+
+        // IMPORTANT: avoid copy-assignment, only swap is allowed
+        beforeState.swap(afterState);
+        beforeTime = afterTime;
+
+        return metrics;
+    }
 
 } // namespace hwgauge

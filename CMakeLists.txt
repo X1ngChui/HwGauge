@@ -18,6 +18,8 @@ project(HwGauge
     DESCRIPTION "Hardware Gauge Application"
 )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # Set C and C++ standards globally
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -145,7 +147,3 @@ add_subdirectory(vendors/CLI11)
 set(ENABLE_COMPRESSION OFF CACHE BOOL "Disable prometheus-cpp compression" FORCE)
 set(ENABLE_PUSH OFF CACHE BOOL "Disable prometheus-cpp push" FORCE)
 add_subdirectory(vendors/prometheus-cpp)
-
-if(HWGAUGE_USE_INTEL_PCM)
-    add_subdirectory(vendors/pcm)
-endif()

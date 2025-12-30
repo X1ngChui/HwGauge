@@ -4,42 +4,45 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <chrono>
 
-// Forward declarations for PCM types
 namespace pcm {
-	class PCM;
-	class SystemCounterState;
-	class SocketCounterState;
+    class PCM;
+    class SystemCounterState;
+    class SocketCounterState;
 }
 
 namespace hwgauge {
-	class PCM {
-	public:
-		explicit PCM();
-		~PCM();
 
-		PCM(const PCM&) = delete;
-		PCM& operator=(const PCM&) = delete;
+    class PCM {
+    public:
+        explicit PCM();
+        ~PCM();
 
-		PCM(PCM&& other) noexcept;
-		PCM& operator=(PCM&& other) noexcept;
+        PCM(const PCM&) = delete;
+        PCM& operator=(const PCM&) = delete;
 
-		std::string name() { return "PCM CPU Collector"; }
-		std::vector<CPULabel> labels();
-		std::vector<CPUMetrics> sample();
+        PCM(PCM&& other) noexcept;
+        PCM& operator=(PCM&& other) noexcept;
 
-	private:
-		bool initialized;
-		pcm::PCM* pcmInstance;
+        std::string name() { return "PCM CPU Collector"; }
 
-		// Store previous counter states for calculating deltas
-		std::vector<pcm::SocketCounterState> beforeState;
-		std::vector<pcm::SocketCounterState> afterState;
+        std::vector<CPULabel>   labels();
+        std::vector<CPUMetrics> sample();
 
-		// Helper function to initialize PCM
-		void initializePCM();
+    private:
+        bool initialized{ false };
+        pcm::PCM* pcmInstance{ nullptr };
 
-		// Helper function to cleanup PCM
-		void cleanupPCM();
-	};
-}
+        std::vector<pcm::SocketCounterState> beforeState;
+        std::vector<pcm::SocketCounterState> afterState;
+
+        std::chrono::steady_clock::time_point beforeTime;
+
+        void initializePCM();
+        void cleanupPCM();
+
+        void snapshot(std::vector<pcm::SocketCounterState>& out);
+    };
+
+} // namespace hwgauge

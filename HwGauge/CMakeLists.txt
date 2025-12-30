@@ -45,9 +45,10 @@ if(HWGAUGE_USE_NVML)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_NVML=1)
 endif()
 
+# Add Intel PCM library
 if(HWGAUGE_USE_INTEL_PCM)
-    target_link_libraries(HwGauge PRIVATE pcm-lib)
-    target_include_directories(HwGauge PRIVATE ../vendors/pcm/src)
+    find_package(PCM REQUIRED)
+    target_link_libraries(HwGauge PRIVATE PCM::pcm)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_INTEL_PCM=1)
 endif()
 
