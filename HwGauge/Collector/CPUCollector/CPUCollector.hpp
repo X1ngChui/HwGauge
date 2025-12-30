@@ -6,7 +6,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <ranges>
 
 namespace hwgauge {
 	struct CPULabel {
@@ -50,7 +49,8 @@ namespace hwgauge {
 		virtual ~CPUCollector() = default;
 
 		void collect() override {
-			for (auto [index, metrics] : std::views::enumerate(sample())) {
+			std::size_t index = 0;
+			for (auto& metrics : sample()) {
 				cpuFrequencyGauges[index]->Set(metrics.cpuFrequency);
 				c0ResidencyGauges[index]->Set(metrics.c0Residency);
 				c6ResidencyGauges[index]->Set(metrics.c6Residency);
@@ -58,6 +58,7 @@ namespace hwgauge {
 				memoryReadBandwidthGauges[index]->Set(metrics.memoryReadBandwidth);
 				memoryWriteBandwidthGauges[index]->Set(metrics.memoryWriteBandwidth);
 				memoryPowerUsageGauges[index]->Set(metrics.memoryPowerUsage);
+				index++;
 			}
 		}
 

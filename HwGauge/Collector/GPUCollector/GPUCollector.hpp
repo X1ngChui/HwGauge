@@ -6,7 +6,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <ranges>
 
 namespace hwgauge {
 	struct GPULabel {
@@ -44,12 +43,14 @@ namespace hwgauge {
 		virtual ~GPUCollector() = default;
 
 		void collect() override {
-			for (auto [index, metrics] : std::views::enumerate(sample())) {
+			std::size_t index = 0;
+			for (auto& metrics : sample()) {
 				gpuUtilizationGauges[index]->Set(metrics.gpuUtilization);
 				memoryUtilizationGauges[index]->Set(metrics.memoryUtilization);
 				gpuFrequencyGauges[index]->Set(metrics.gpuFrequency);
 				memoryFrequencyGauges[index]->Set(metrics.memoryFrequency);
 				powerUsageGauges[index]->Set(metrics.powerUsage);
+				index++;
 			}
 		}
 

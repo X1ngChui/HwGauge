@@ -23,7 +23,7 @@ set_target_properties(HwGauge PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED ON
     C_EXTENSIONS OFF
-    CXX_STANDARD 23
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
     OUTPUT_NAME "hwgauge"
@@ -45,11 +45,23 @@ if(HWGAUGE_USE_NVML)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_NVML=1)
 endif()
 
-# Add Intel PCM library
+# Add Intel PCM libraryc
 if(HWGAUGE_USE_INTEL_PCM)
-    find_package(PCM REQUIRED)
-    target_link_libraries(HwGauge PRIVATE PCM::pcm)
+    set(PCM_INCLUDE_DIR "/usr/local/src/pcm/src")
+    set(PCM_LIBRARY     "/usr/local/src/pcm/build/libpcm.so")
+
+    message(STATUS "Using hard-coded PCM path:")
+    message(STATUS "  include = ${PCM_INCLUDE_DIR}")
+    message(STATUS "  library = ${PCM_LIBRARY}")
+
+    if(NOT EXISTS ${PCM_LIBRARY})
+        message(FATAL_ERROR "PCM library not found at ${PCM_LIBRARY}")
+    endif()
+
+    target_include_directories(HwGauge PRIVATE ${PCM_INCLUDE_DIR})
+    target_link_libraries(HwGauge PRIVATE ${PCM_LIBRARY})
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_INTEL_PCM=1)
+
 endif()
 
 # Add spdlog library

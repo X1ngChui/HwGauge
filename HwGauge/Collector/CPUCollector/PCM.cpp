@@ -1,7 +1,6 @@
 #include "PCM.hpp"
 #include "cpucounters.h"
 
-#include <format>
 #include <stdexcept>
 #include <thread>
 #include <chrono>
@@ -81,8 +80,7 @@ namespace hwgauge {
             break;
 
         default:
-            throw std::runtime_error(
-                std::format("PCM init failed: {}", int(status)));
+            throw std::runtime_error("PCM init failed: " + std::to_string(int(status))));
         }
 
         initialized = true;

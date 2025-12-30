@@ -1,6 +1,5 @@
 #include "NVML.hpp"
 #include <nvml.h>
-#include <format>
 #include <array>
 
 namespace hwgauge {
@@ -8,7 +7,7 @@ namespace hwgauge {
 	{
 		nvmlReturn_t status = nvmlInit();
 		if (status != NVML_SUCCESS) {
-			throw std::runtime_error(std::format("NVML initialization failed: {}", nvmlErrorString(status)));
+			throw std::runtime_error("NVML initialization failed");
 		}
 	}
 
@@ -17,7 +16,7 @@ namespace hwgauge {
 			nvmlReturn_t status = nvmlShutdown();
 
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML shutdown failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML shutdown failed");
 			}
 		}
 	}
@@ -51,7 +50,7 @@ namespace hwgauge {
 		status = nvmlDeviceGetCount(std::addressof(devicesCount));
 
 		if (status != NVML_SUCCESS) {
-			throw std::runtime_error(std::format("NVML get devices count failed: {}", nvmlErrorString(status)));
+			throw std::runtime_error("NVML get devices count failed");
 		}
 
 		std::vector<GPULabel> labels;
@@ -59,13 +58,13 @@ namespace hwgauge {
 			nvmlDevice_t handle;
 			status = nvmlDeviceGetHandleByIndex(index, std::addressof(handle));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get devices handle failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get devices handle failed");
 			}
 
 			std::array<char, NVML_DEVICE_NAME_BUFFER_SIZE> name = { 0 };
 			status = nvmlDeviceGetName(handle, name.data(), name.size() - 1);
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get devices name failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get devices name failed");
 			}
 
 			GPULabel label = {
@@ -85,7 +84,7 @@ namespace hwgauge {
 		unsigned int devicesCount = 0;
 		status = nvmlDeviceGetCount(std::addressof(devicesCount));
 		if (status != NVML_SUCCESS) {
-			throw std::runtime_error(std::format("NVML get devices count failed: {}", nvmlErrorString(status)));
+			throw std::runtime_error("NVML get devices count failed");
 		}
 
 		std::vector<GPUMetrics> metrics;
@@ -93,14 +92,14 @@ namespace hwgauge {
 			nvmlDevice_t handle;
 			status = nvmlDeviceGetHandleByIndex(index, std::addressof(handle));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get devices handle failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get devices handle failed: {}");
 			}
 
 			// GPU / Memory Utilization
 			nvmlUtilization_t utilization;
 			status = nvmlDeviceGetUtilizationRates(handle, std::addressof(utilization));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get utilizations rates failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get utilizations rates failed");
 			}
 			double gpuUtilization = utilization.gpu;
 			double memoryUtilization = utilization.memory;
@@ -109,7 +108,7 @@ namespace hwgauge {
 			unsigned int smClock;
 			status = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_SM, std::addressof(smClock));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get SM clock info failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get SM clock info failed: {}");
 			}
 			double gpuFrequency = smClock;
 
@@ -117,7 +116,7 @@ namespace hwgauge {
 			unsigned int memClock;
 			status = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_MEM, std::addressof(memClock));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get memory clock info failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get memory clock info failed");
 			}
 			double memFrequency = memClock;
 
@@ -125,7 +124,7 @@ namespace hwgauge {
 			unsigned int power;
 			status = nvmlDeviceGetPowerUsage(handle, std::addressof(power));
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error(std::format("NVML get power usage failed: {}", nvmlErrorString(status)));
+				throw std::runtime_error("NVML get power usage failed");
 			}
 			double power_usage = power / 1e3;  // mW -> W
 
