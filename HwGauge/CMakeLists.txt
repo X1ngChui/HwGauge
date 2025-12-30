@@ -46,6 +46,7 @@ endif()
 if(HWGAUGE_USE_NVML)
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(HwGauge PRIVATE CUDA::nvml)
+    target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_NVML=1)
 endif()
 
 # Add spdlog library

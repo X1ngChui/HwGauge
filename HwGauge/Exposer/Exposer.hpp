@@ -7,13 +7,14 @@
 #include <memory>
 #include <utility>
 #include <atomic>
+#include <chrono>
 #include <spdlog/spdlog.h>
 
 namespace hwgauge {
 	class Exposer {
 	public:
-		Exposer(std::string address) :
-			exposer(std::move(address)), registry(std::make_shared<Registry>()) {}
+		Exposer(std::string address, std::chrono::seconds interval) :
+			exposer(std::move(address)), registry(std::make_shared<Registry>()), interval(interval) {}
 
 		template<typename T, typename... Args>
 		void inline add_collector(Args&&... args) {
@@ -29,6 +30,7 @@ namespace hwgauge {
 		std::shared_ptr<Registry> registry;
 
 		std::atomic<bool> running = false;
+		std::chrono::seconds interval;
 		std::vector<std::unique_ptr<Collector>> collectors;
 	};
 }

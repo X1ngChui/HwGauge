@@ -3,10 +3,13 @@
 #include <string>
 #include <csignal>
 #include <memory>
+#include <chrono>
 
 #include "Exposer/Exposer.hpp"
 #include "Collector/GPUCollector/GPUCollector.hpp"
-#include "Collector/GPUCollector/NVML.hpp"
+#ifdef HWGAUGE_USE_NVML
+#	include "Collector/GPUCollector/NVML.hpp"
+#endif
 
 std::unique_ptr<hwgauge::Exposer> exposer = nullptr;
 
@@ -33,14 +36,25 @@ int main(int argc, char* argv[]) {
 
 	CLI11_PARSE(application, argc, argv);
 
+	// Command-line arguments: interval
+	constexpr int default_interval = 1;
+	int interval_seconds = default_interval;
+	application.add_option("-i,--interval", interval_seconds,
+		"Collection interval in seconds")
+		->default_val(default_interval);
+
 	// Initialize spdlog logger
 	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");
 	spdlog::info("Spdlog initialized successfully");
 
 	// Create Prometheus exposer
-	exposer = std::make_unique<hwgauge::Exposer>(address);
-	exposer->add_collector<hwgauge::GPUCollector<hwgauge::NVML>>(hwgauge::NVML());
+	exposer = std::make_unique<hwgauge::Exposer>(address, std::chrono::seconds(interval_seconds));
 	std::signal(SIGINT, signal_handler);
+
+#ifdef HWGAUGE_USE_NVML
+	exposer->add_collector<hwgauge::GPUCollector<hwgauge::NVML>>(hwgauge::NVML());
+#endif
+
 	spdlog::info("Staring exposer on \"{}\"", address);
 	spdlog::info("Press \"Ctrl+C\" to stop exposer");
 	exposer->run();

@@ -8,8 +8,19 @@ namespace hwgauge {
 		running.store(true, std::memory_order_release);
 		exposer.RegisterCollectable(registry);
 
+		using clock = std::chrono::steady_clock;
+
+		auto next_tick = clock::now();
+
 		while (running.load(std::memory_order_acquire)) {
 			collect();
+
+			next_tick += interval;
+			auto now = clock::now();
+
+			if (now < next_tick) {
+				std::this_thread::sleep_until(next_tick);
+			}
 		}
 	}
 
