@@ -39,7 +39,7 @@ namespace hwgauge {
 			memoryPowerUsageFamily(prometheus::BuildGauge().Name("memory_power_usage_watts").Help("Memory power usage in watts").Register(*registry))
 		{
 			for (auto& label : labels()) {
-				cpuUtilizationGauges.push_back(std::addressof(cpuFrequencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
+				cpuUtilizationGauges.push_back(std::addressof(cpuUtilizationFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
 				cpuFrequencyGauges.push_back(std::addressof(cpuFrequencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
 				c0ResidencyGauges.push_back(std::addressof(c0ResidencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
 				c6ResidencyGauges.push_back(std::addressof(c6ResidencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));

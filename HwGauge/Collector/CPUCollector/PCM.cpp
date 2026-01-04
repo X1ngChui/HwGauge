@@ -145,25 +145,21 @@ namespace hwgauge {
 
             m.cpuUtilization = 100.0 * pcm::getExecUsage(before, after);
 
-            /* ===== Frequency (Hz, averaged active) ===== */
             m.cpuFrequency =
-                pcm::getActiveAverageFrequency(before, after);
+                pcm::getActiveAverageFrequency(before, after) / 1e6;  // Hz -> MHz
 
-            /* ===== C-state (%) ===== */
             m.c0Residency =
                 100.0 * pcm::getPackageCStateResidency(0, before, after);
 
             m.c6Residency =
                 100.0 * pcm::getPackageCStateResidency(6, before, after);
 
-            /* ===== Power (W) ===== */
             m.powerUsage =
                 pcm::getConsumedJoules(before, after) / elapsed;
 
             m.memoryPowerUsage =
                 pcm::getDRAMConsumedJoules(before, after) / elapsed;
 
-            /* ===== Memory BW (Bytes/s) ===== */
             double readBytes = pcm::getBytesReadFromMC(before, after);
             double writeBytes = pcm::getBytesWrittenToMC(before, after);
 
@@ -173,7 +169,6 @@ namespace hwgauge {
             metrics.push_back(m);
         }
 
-        // IMPORTANT: avoid copy-assignment, only swap is allowed
         beforeState.swap(afterState);
         beforeTime = afterTime;
 
