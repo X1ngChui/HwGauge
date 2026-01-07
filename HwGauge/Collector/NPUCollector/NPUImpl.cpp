@@ -60,14 +60,14 @@ namespace hwgauge
     }
         
     /*采集所有设备的指标数据*/
-    std::vector<NPUMetric> NPUImpl::sample()
+    std::vector<NPUMetrics> NPUImpl::sample()
     {
         if(!is_label_initialized)raise_error("label hasn't been called",-1,-1,-1,true);
-        std::vector<NPUMetric> metrics;
+        std::vector<NPUMetrics> metrics;
         //为每个设备采集数据
         for (const auto& label : label_list)
         {
-            NPUMetric metric;
+            NPUMetrics metric;
             collect_single_device(label.card_id, label.device_id, metric);
             metrics.push_back(metric);
         }
@@ -75,7 +75,7 @@ namespace hwgauge
     }
 
     /*采集单个设备的指标*/
-    void NPUImpl::collect_single_device(int card, int device, NPUMetric& metric)
+    void NPUImpl::collect_single_device(int card, int device, NPUMetrics& metric)
     {
         int ret;
         /*利用率*/

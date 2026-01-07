@@ -53,20 +53,63 @@ if(HWGAUGE_USE_INTEL_PCM)
 
 endif()
 
+
 # Add Ascend NPU
 if(HWGAUGE_USE_NPU)
-    # 添加昇腾相关库
-    target_include_directories(HwGauge PUBLIC
-        /usr/local/Ascend/driver/include
+    # 查找昇腾相关路径
+    find_path(ASCEND_INCLUDE_DIR
+        NAMES dcmi_interface_api.h
+        PATHS
+            ${CMAKE_PREFIX_PATH}/include
+            /usr/local/Ascend/driver/include
+            /usr/local/Ascend/include
+            /opt/Ascend/driver/include
+            /usr/include
+        DOC "Path to Ascend NPU header files"
     )
-    target_link_directories(HwGauge PUBLIC
-        /usr/local/Ascend/driver/lib64/driver
+    
+    # 查找多个可能的库文件位置
+    find_library(DCMI_LIB
+        NAMES dcmi
+        PATHS
+            ${CMAKE_PREFIX_PATH}/lib64/driver
+            ${CMAKE_PREFIX_PATH}/lib64
+            /usr/local/Ascend/driver/lib64/driver
+            /usr/local/Ascend/lib64
+            /opt/Ascend/driver/lib64/driver
+            /usr/lib64
+        DOC "Path to Ascend DCMI library"
     )
-    target_link_libraries(HwGauge PRIVATE
-        dcmi
-        ascend_hal
+    
+    find_library(ASCEND_HAL_LIB
+        NAMES ascend_hal
+        PATHS
+            ${CMAKE_PREFIX_PATH}/lib64/driver
+            ${CMAKE_PREFIX_PATH}/lib64
+            /usr/local/Ascend/driver/lib64/driver
+            /usr/local/Ascend/lib64
+            /opt/Ascend/driver/lib64/driver
+            /usr/lib64
+        DOC "Path to Ascend HAL library"
     )
-    target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_NPU=1)
+    
+    # 检查是否找到所有必要组件
+    if(ASCEND_INCLUDE_DIR AND DCMI_LIB AND ASCEND_HAL_LIB)
+        target_include_directories(HwGauge PUBLIC ${ASCEND_INCLUDE_DIR})
+        target_link_libraries(HwGauge PRIVATE ${DCMI_LIB} ${ASCEND_HAL_LIB})
+        target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_NPU=1)
+        
+        message(STATUS "Ascend NPU support enabled")
+        message(STATUS "  Include dir: ${ASCEND_INCLUDE_DIR}")
+        message(STATUS "  Libraries: ${DCMI_LIB}, ${ASCEND_HAL_LIB}")
+    else()
+        message(WARNING "Ascend NPU support requested but required components not found")
+        message(WARNING "  ASCEND_INCLUDE_DIR: ${ASCEND_INCLUDE_DIR}")
+        message(WARNING "  DCMI_LIB: ${DCMI_LIB}")
+        message(WARNING "  ASCEND_HAL_LIB: ${ASCEND_HAL_LIB}")
+        message(WARNING "Please check if Ascend driver is installed and set CMAKE_PREFIX_PATH if needed")
+        set(HWGAUGE_USE_NPU OFF CACHE BOOL "Enable collectors for NPU (Ascend)" FORCE)
+    endif()
 endif()
 
 # Add spdlog library

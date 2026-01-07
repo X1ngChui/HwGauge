@@ -14,7 +14,7 @@ namespace hwgauge
         int card_id;
         int device_id;
     };
-    struct NPUMetric
+    struct NPUMetrics
     {
         //利用率（%）
         uint32_t util_aicore; //AICore
@@ -168,5 +168,3 @@ namespace hwgauge
         prometheus::Family<prometheus::Gauge>* voltage_gauge_;
     };
 }
-
-#endif // NPU_COLLECTOR_H

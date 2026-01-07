@@ -1,12 +1,13 @@
 ﻿# HwGauge
 
-HwGauge is a lightweight hardware power-consumption exporter that exposes **CPU and GPU energy metrics as Prometheus Gauges**.
+HwGauge is a lightweight hardware power-consumption exporter that exposes **CPU、GPU and NPU energy metrics as Prometheus Gauges**.
 It is implemented in modern C++ to provide **high-performance monitoring with minimal overhead**.
 
 ## ✨ Features
 
 * 🖥️ **CPU Monitoring** — Intel PCM (Processor Counter Monitor)
 * 🎮 **GPU Monitoring** — NVIDIA NVML (CUDA Toolkit required)
+* 🧠 **NPU Monitoring** — Ascend NPU (DCMI required)
 * 📡 **Prometheus Exposer** — Built-in HTTP server with configurable endpoint
 * ⚙️ **Template-based Collector Framework** — clean separation of metrics & hardware backends
 
@@ -19,6 +20,7 @@ It is implemented in modern C++ to provide **high-performance monitoring with mi
 | CMake ≥ 3.25    | Required for building                     |
 | C++17 compiler  | GCC / Clang / MSVC                        |
 | CUDA Toolkit    | Required for NVML GPU monitoring          |
+| NPU SDK/Driver  | Required for NPU monitoring               |
 | Root privileges | Needed to access hardware registers (PCM) |
 
 ---
@@ -67,7 +69,7 @@ cmake --build . --parallel
 | ----------------------- | ------- | ---------------------------- |
 | `HWGAUGE_USE_INTEL_PCM` | `ON`    | Enable Intel CPU collectors  |
 | `HWGAUGE_USE_NVML`      | `ON`    | Enable NVIDIA GPU collectors |
-
+| `HWGAUGE_USE_NPU`       | `ON`    | Enable Ascend NPU collectors |
 Disable collectors you don't need to reduce dependencies.
 
 ---
@@ -124,6 +126,23 @@ sudo bin/hwgauge --address 0.0.0.0:8080 --interval 2
 | `gpu_frequency_mhz`              | MHz  | Core clock       |
 | `gpu_memory_frequency_mhz`       | MHz  | Memory clock     |
 | `gpu_power_usage_watts`          | W    | Power draw       |
+
+---
+
+### 🧠 NPU（华为 Ascend）
+
+| Metric                                 | Unit  | Description              |
+| -------------------------------------- | ----- | ------------------------ |
+| `npu_aicore_utilization_percent`       | %     | NPU AICore 利用率        |
+| `npu_aicpu_utilization_percent`        | %     | NPU AICPU 利用率         |
+| `npu_memory_utilization_percent`       | %     | NPU 内存利用率           |
+| `npu_aicore_frequency_mhz`             | MHz   | NPU AICore 频率          |
+| `npu_aicpu_frequency_mhz`              | MHz   | NPU AICPU 频率           |
+| `npu_mem_frequency_mhz`                | MHz   | NPU 内存频率             |
+| `npu_power_watts`                      | W     | NPU 功耗                 |
+| `npu_health`                           | -     | NPU 健康状态             |
+| `npu_temperature_celsius`              | °C    | NPU 温度                 |
+| `npu_voltage_volts`                    | V     | NPU 电压                 |
 
 ---
 
