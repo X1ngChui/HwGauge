@@ -2,6 +2,7 @@
 #include "NVML.hpp"
 #include <nvml.h>
 #include <array>
+#include <stdexcept>
 
 namespace hwgauge {
 	NVML::NVML()
