@@ -1,0 +1,83 @@
+---
+- name: 停止 HwGauge 和 HwLoad 服务
+  hosts: workers
+  become: yes  # 必须使用 root，因为启动时用了 sudo，且需要杀进程
+  gather_facts: no
+
+  vars:
+    # 定义需要停止的进程二进制名称
+    target_processes:
+      - hwgauge
+      - loadgen   # 假设你的负载生成器编译后的二进制文件名叫 loadgen
+
+    # 定义需要销毁的 tmux 会话名
+    target_sessions:
+      - hw_monitor
+      - hw_load
+
+  tasks:
+    # -------------------------------------------------------
+    # 步骤 1: 优雅地销毁 Tmux 会话
+    # -------------------------------------------------------
+    - name: 销毁 Tmux 会话
+      shell: |
+        tmux kill-session -t {{ item }} 2>/dev/null || echo "Session {{ item }} not found"
+      loop: "{{ target_sessions }}"
+      ignore_errors: yes
+      changed_when: false
+
+    # -------------------------------------------------------
+    # 步骤 2: 暴力清理残留进程 (兜底机制)
+    # -------------------------------------------------------
+    - name: 确保进程完全终止 (清理孤儿进程)
+      shell: |
+        PROC_NAME="{{ item }}"
+        
+        # 1. 查找进程 ID
+        target_pid=$(pgrep -x "$PROC_NAME")
+
+        if [ -n "$target_pid" ]; then
+          echo "Found orphan $PROC_NAME (PID: $target_pid), killing..."
+          
+          # 直接发送 SIGKILL (-9)，因为此时 Tmux 已经被杀，留下的都是异常进程
+          kill -9 $target_pid
+          
+          # 等一小会儿
+          sleep 1
+          
+          # 再次检查
+          if pgrep -x "$PROC_NAME" > /dev/null; then
+             echo "failed_to_kill"
+             exit 1
+          else
+             echo "killed"
+          fi
+        else
+          echo "not_running"
+        fi
+      loop: "{{ target_processes }}"
+      register: kill_result
+      # 只有真正执行了 kill 操作才标记为 changed
+      changed_when: "'killed' in kill_result.stdout"
+      failed_when: "'failed_to_kill' in kill_result.stdout"
+
+    # -------------------------------------------------------
+    # 步骤 3: 最终状态确认
+    # -------------------------------------------------------
+    - name: 最终确认所有目标进程已消失
+      shell: "pgrep -x '{{ item }}'"
+      loop: "{{ target_processes }}"
+      register: final_check
+      # 如果 grep 到了进程 (rc=0)，说明还在运行，报错
+      failed_when: final_check.rc == 0
+      ignore_errors: yes
+
+    - name: 汇报停止结果
+      debug:
+        msg: >-
+          节点 {{ inventory_hostname }}: 
+          {% if final_check.results | selectattr('rc', 'equalto', 0) | list | length > 0 %}
+            停止失败！仍有进程存活。
+          {% else %}
+            全部停止成功 (Tmux会话已销毁 + 进程已清理)。
+          {% endif %}

@@ -34,10 +34,6 @@ target_include_directories(HwGauge PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Add Intel PCM library
-if(HWGAUGE_USE_INTEL_PCM)
-endif()
-
 # Add NVML library
 if(HWGAUGE_USE_NVML)
     find_package(CUDAToolkit REQUIRED)
@@ -52,7 +48,6 @@ if(HWGAUGE_USE_INTEL_PCM)
     target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_INTEL_PCM=1)
 
 endif()
-
 
 # Add Ascend NPU
 if(HWGAUGE_USE_NPU)
@@ -112,6 +107,52 @@ if(HWGAUGE_USE_NPU)
     endif()
 endif()
 
+# =============================================================
+# Cluster (Redis) Support - System Library Mode
+# =============================================================
+if(HWGAUGE_USE_CLUSTER)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(HIREDIS REQUIRED hiredis)
+
+    target_include_directories(HwGauge PRIVATE
+        ${HIREDIS_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(HwGauge PRIVATE
+        ${HIREDIS_LIBRARIES}
+    )
+
+    target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_CLUSTER=1)
+
+    message(STATUS "Cluster (Redis via hiredis) support enabled")
+endif()
+
+
+# Add PostgreSQL library (conditional)
+if(HWGAUGE_USE_POSTGRESQL)
+    # Windows / Linux 都用 Module 模式
+    find_package(PostgreSQL REQUIRED)
+    target_include_directories(HwGauge PRIVATE
+        ${PostgreSQL_INCLUDE_DIRS}
+    )
+    target_link_libraries(HwGauge PRIVATE
+        ${PostgreSQL_LIBRARIES}
+    )
+    if(WIN32)
+        target_link_libraries(HwGauge PRIVATE
+            ws2_32
+            secur32
+        )
+    endif()
+    target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_POSTGRESQL=1)
+
+    message(STATUS "PostgreSQL support enabled")
+    message(STATUS "  Include dir: ${PostgreSQL_INCLUDE_DIRS}")
+    message(STATUS "  Libraries: ${PostgreSQL_LIBRARIES}")
+
+endif()
+
+
 # Add spdlog library
 target_link_libraries(HwGauge PRIVATE spdlog::spdlog)
 
@@ -119,4 +160,11 @@ target_link_libraries(HwGauge PRIVATE spdlog::spdlog)
 target_link_libraries(HwGauge PRIVATE CLI11::CLI11)
 
 # Add prometheus-cpp library
-target_link_libraries(HwGauge PRIVATE prometheus-cpp::pull)
+# target_link_libraries(HwGauge PRIVATE prometheus-cpp::pull)
+if(HWGAUGE_USE_PROMETHEUS)
+    target_link_libraries(HwGauge PRIVATE prometheus-cpp::pull)
+    target_compile_definitions(HwGauge PRIVATE HWGAUGE_USE_PROMETHEUS=1)
+    message(STATUS "Prometheus support enabled in HwGauge")
+else()
+    message(STATUS "Prometheus support disabled in HwGauge")
+endif()

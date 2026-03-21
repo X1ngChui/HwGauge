@@ -1,79 +1,49 @@
 #pragma once
 
-#include "prometheus/gauge.h"
-#include "prometheus/family.h"
-#include "Collector/Collector.hpp"
-#include <string>
-#include <utility>
-#include <vector>
+#ifdef HWGAUGE_USE_NVML
 
-namespace hwgauge {
-	struct GPULabel {
-		std::size_t index;
-		std::string name;
-	};
+#include "Collector/Base/DeviceCollector.hpp"
+#include "NVML.hpp"
+#include "GPUDatabase.hpp"
+#include "GPUCsvLogger.hpp"
+#include "GPUPrometheus.hpp"
 
-	struct GPUMetrics {
-		double gpuUtilization;
-		double memoryUtilization;
-		double gpuFrequency;
-		double memoryFrequency;
-		double powerUsage;
-	};
+#include <iostream>
 
-	template <typename T>
-	class GPUCollector : public Collector {
-	public:
-		explicit GPUCollector(std::shared_ptr<Registry> registry, T impl) :
-			Collector(registry), impl(std::move(impl)),
-			gpuUtilizationFamily(prometheus::BuildGauge().Name("gpu_utilization_percent").Help("GPU utilization percentage").Register(*registry)),
-			memoryUtilizationFamily(prometheus::BuildGauge().Name("gpu_memory_utilization_percent").Help("GPU memory utilization percentage").Register(*registry)),
-			gpuFrequencyFamily(prometheus::BuildGauge().Name("gpu_frequency_mhz").Help("GPU frequency in MHz").Register(*registry)),
-			memoryFrequencyFamily(prometheus::BuildGauge().Name("gpu_memory_frequency_mhz").Help("GPU memory frequency in MHz").Register(*registry)),
-			powerUsageFamily(prometheus::BuildGauge().Name("gpu_power_usage_watts").Help("GPU power usage in watts").Register(*registry))
-		{
-			for (auto& label : labels()) {
-				gpuUtilizationGauges.push_back(std::addressof(gpuUtilizationFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
-				memoryUtilizationGauges.push_back(std::addressof(memoryUtilizationFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
-				gpuFrequencyGauges.push_back(std::addressof(gpuFrequencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
-				memoryFrequencyGauges.push_back(std::addressof(memoryFrequencyFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
-				powerUsageGauges.push_back(std::addressof(powerUsageFamily.Add({ { "index", std::to_string(label.index) }, { "name", label.name } })));
-			}
-		}
-		virtual ~GPUCollector() = default;
+namespace hwgauge
+{
+#ifdef HWGAUGE_USE_POSTGRESQL
+    using GPUDatabaseType = GPUDatabase;
+#else
+    using GPUDatabaseType = NullType;
+#endif
 
-		void collect() override {
-			std::size_t index = 0;
-			for (auto& metrics : sample()) {
-				gpuUtilizationGauges[index]->Set(metrics.gpuUtilization);
-				memoryUtilizationGauges[index]->Set(metrics.memoryUtilization);
-				gpuFrequencyGauges[index]->Set(metrics.gpuFrequency);
-				memoryFrequencyGauges[index]->Set(metrics.memoryFrequency);
-				powerUsageGauges[index]->Set(metrics.powerUsage);
-				index++;
-			}
-		}
-
-		std::string name() override { return impl.name(); }
-		std::vector<GPULabel> labels() { return impl.labels(); }
-		std::vector<GPUMetrics> sample() { return impl.sample(); }
-
-	private:
-		T impl;
-
-		prometheus::Family<prometheus::Gauge>& gpuUtilizationFamily;
-		std::vector<prometheus::Gauge*> gpuUtilizationGauges;
-
-		prometheus::Family<prometheus::Gauge>& memoryUtilizationFamily;
-		std::vector<prometheus::Gauge*> memoryUtilizationGauges;
-
-		prometheus::Family<prometheus::Gauge>& gpuFrequencyFamily;
-		std::vector<prometheus::Gauge*> gpuFrequencyGauges;
-
-		prometheus::Family<prometheus::Gauge>& memoryFrequencyFamily;
-		std::vector<prometheus::Gauge*> memoryFrequencyGauges;
-
-		prometheus::Family<prometheus::Gauge>& powerUsageFamily;
-		std::vector<prometheus::Gauge*> powerUsageGauges;
-	};
+#ifdef HWGAUGE_USE_PROMETHEUS
+    using GPUPrometheusType = GPUPrometheus;
+#else
+    using GPUPrometheusType = NullType;
+#endif
+    // 定义别名
+    using GPUCollector = DeviceCollector<
+        GPULabel, GPUMetrics, NVML, GPUDatabaseType, GPUCsvLogger, GPUPrometheusType
+    >;
+    
+    // 定义特定的打印函数
+    template<>
+    inline void printMetric(const GPULabel& l, const GPUMetrics& m)
+    {
+        std::cout
+            << "GPU{ "
+            << "index="    << l.index
+            << ", name="   << l.name
+            << ", util="   << m.gpuUtilization
+            << ", memUtil="<< m.memoryUtilization
+            << ", gpuFreq="<< m.gpuFrequency
+            << ", memFreq="<< m.memoryFrequency
+            << ", power="  << m.powerUsage
+            << ", temp="   << m.temperature<<"C"
+            << " }\n";
+    }
 }
+
+#endif

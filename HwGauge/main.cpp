@@ -4,75 +4,155 @@
 #include <csignal>
 #include <memory>
 #include <chrono>
+#include <atomic>
 
 #include "Exposer/Exposer.hpp"
-#include "Collector/GPUCollector/GPUCollector.hpp"
-#ifdef HWGAUGE_USE_NVML
-#	include "Collector/GPUCollector/NVML.hpp"
-#endif
-#include "Collector/CPUCollector/CPUCollector.hpp"
+#include "Collector/Common/Config.hpp"
+
 #ifdef HWGAUGE_USE_INTEL_PCM
-#	include "Collector/CPUCollector/PCM.hpp"
+#include "Collector/CPUCollector/CPUCollector.hpp"
 #endif
 
-#include "Collector/NPUCollector/NPUCollector.hpp"
+#ifdef HWGAUGE_USE_NVML
+#include "Collector/GPUCollector/GPUCollector.hpp"
+#endif
+
 #ifdef HWGAUGE_USE_NPU
-#	include "Collector/NPUCollector/NPUImpl.hpp"
+#include "Collector/NPUCollector/NPUCollector.hpp"
+#endif
+
+#ifdef __linux__
+#include "Collector/SYSCollector/SYSCollector.hpp"
+#endif
+
+#ifdef HWGAUGE_USE_CLUSTER
+#include "Collector/ClusterCollector/ClusterCollector.hpp"
 #endif
 
 std::unique_ptr<hwgauge::Exposer> exposer = nullptr;
 
-static void signal_handler(int signal) {
-	if (signal == SIGINT && exposer != nullptr) {
-		spdlog::info("Stopping exposer");
-		exposer->stop();
-		exposer.reset();
-	}
+std::atomic<bool> g_stop_requested{false};
+static void signal_handler(int signal)
+{
+    if (signal == SIGINT) {
+        g_stop_requested.store(true, std::memory_order_relaxed);
+    }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 	// Parse command-line arguments
 	CLI::App application{
-		"HwGauge: A lightweight hardware power consumption exporter for Prometheus metrics."
+		"HwGauge: A lightweight hardware power consumption exporter for Prometheus metrics or PostgreSQL."
 	};
 	argv = application.ensure_utf8(argv);
-	
-	// Command-line arguments: address
-	constexpr char default_address[] = "127.0.0.1:8000";
-	std::string address = default_address;
-	application.add_option("-a,--address", address, "Address to start Prometheus exposer")
-		->default_val(default_address);
+
+	// Initialize spdlog logger
+	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");
+	spdlog::set_level(spdlog::level::info); 
+	spdlog::info("Spdlog initialized successfully");
 
 	// Command-line arguments: interval
-	constexpr int default_interval = 1;
+	constexpr int default_interval = 5;
 	int interval_seconds = default_interval;
 	application.add_option("-i,--interval", interval_seconds, "Collection interval in seconds")
 		->default_val(default_interval)
 		->check(CLI::PositiveNumber);
 
+	// Command-line arguments: address
+	constexpr char default_address[] = "127.0.0.1:8000";
+	std::string address = default_address;
+	application.add_option("-a,--address", address, "Address to start exposer")->default_val(default_address);
+
+	// Command-line arguments: sysInfo
+	bool sysInfo=false;
+	application.add_flag("--sysInfo", sysInfo, "Enable to out the system information");
+
+	hwgauge::CollectorConfig cfg;
+	// Command-line arguments: outTer
+	application.add_flag("--outTer", cfg.outTer, "Enable to out the Collection Results to Terminal")->default_val(true);
+
+	// Command-line arguments: outFile
+	application.add_flag("--outFile", cfg.outFile, "Enable to out the Collection Results to File")->default_val(false);
+	application.add_option("--file-path", cfg.filepath, "Out filename")->default_val("metric.csv");
+
+#ifdef HWGAUGE_USE_CLUSTER
+	// Command-line arguments: clusterInfo
+	bool clusterInfo=false;
+	application.add_flag("--clusterInfo", clusterInfo, "Enable to out the cluster information");
+	// Command-line arguments: cluster
+	application.add_flag("--clu-heartbeat", cfg.clusterConfig.heartbeat, "Enable heartbeat to Redis")->default_val(true);
+	application.add_option("--clu-nodeId", cfg.clusterConfig.nodeId, "Unique Node ID for this machine")->default_val("node-001");
+	application.add_option("--clu-host", cfg.clusterConfig.host, "Cluster host")->default_val("localhost");
+	application.add_option("--clu-port", cfg.clusterConfig.port, "Cluster port")->default_val("6379");
+	application.add_option("--clu-password", cfg.clusterConfig.password, "Cluster password")->default_val("123456");
+	application.add_option("--clu-ttl", cfg.clusterConfig.ttlSeconds, "Heartbeat key TTL in seconds")->default_val(5);
+#endif
+
+#ifdef HWGAUGE_USE_PROMETHEUS
+	// Command-line arguments: prometheus
+	auto registry=std::make_shared<prometheus::Registry>();
+	prometheus::Exposer pm_exposer(std::move(address));
+	pm_exposer.RegisterCollectable(registry);
+	cfg.registry = registry;
+
+	cfg.pmEnable = false;
+	application.add_flag("--pm-enable", cfg.pmEnable, "Enable Prometheus metrics export");
+#endif
+
+#ifdef HWGAUGE_USE_POSTGRESQL
+	// Command-line arguments: database
+	application.add_flag("--db-enable", cfg.dbEnable, "Enable database storage for NPU metrics")->default_val(false);
+	application.add_option("--db-host", cfg.dbConfig.host, "Database host")->default_val("localhost");
+	application.add_option("--db-port", cfg.dbConfig.port, "Database port")->default_val("5432");
+	application.add_option("--db-name", cfg.dbConfig.dbname, "Database name")->default_val("postgres");
+	application.add_option("--db-user", cfg.dbConfig.user, "Database user")->default_val("postgres");
+	application.add_option("--db-password", cfg.dbConfig.password, "Database password")->default_val("123456");
+
+	// Command-line arguments: table_name
+	application.add_option("--db-table", cfg.dbTableName, "Database table name for device metrics")->default_val("test");
+#endif
 	CLI11_PARSE(application, argc, argv);
 
-	// Initialize spdlog logger
-	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");
-	spdlog::info("Spdlog initialized successfully");
-
-	// Create Prometheus exposer
-	exposer = std::make_unique<hwgauge::Exposer>(address, std::chrono::seconds(interval_seconds));
-	std::signal(SIGINT, signal_handler);
+	// Create exposer
+	exposer = std::make_unique<hwgauge::Exposer>(std::chrono::seconds(interval_seconds));
+#ifdef HWGAUGE_USE_INTEL_PCM
+	exposer->add_collector<hwgauge::CPUCollector>(cfg);
+#endif
 
 #ifdef HWGAUGE_USE_NVML
-	exposer->add_collector<hwgauge::GPUCollector<hwgauge::NVML>>(hwgauge::NVML());
-#endif
-#ifdef HWGAUGE_USE_INTEL_PCM
-	exposer->add_collector<hwgauge::CPUCollector<hwgauge::PCM>>(hwgauge::PCM());
+	exposer->add_collector<hwgauge::GPUCollector>(cfg);
 #endif
 
 #ifdef HWGAUGE_USE_NPU
-	exposer->add_collector<hwgauge::NPUCollector<hwgauge::NPUImpl>>(hwgauge::NPUImpl());
+	exposer->add_collector<hwgauge::NPUCollector>(cfg);
+#endif
+
+#ifdef __linux__
+	if(sysInfo)exposer->add_collector<hwgauge::SYSCollector>(cfg);
+#endif
+
+#ifdef HWGAUGE_USE_CLUSTER
+	if(clusterInfo)exposer->add_collector<hwgauge::ClusterCollector>(cfg);
 #endif
 
 	spdlog::info("Staring exposer on \"{}\"", address);
 	spdlog::info("Press \"Ctrl+C\" to stop exposer");
+	
+	std::signal(SIGINT, signal_handler);
+	std::thread signal_watcher([&]{
+		while (!g_stop_requested.load(std::memory_order_relaxed))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		spdlog::info("Stopping exposer");
+		exposer->stop();
+	});
+
 	exposer->run();
+	//g_stop_requested.store(true, std::memory_order_relaxed);
+
+	signal_watcher.join();
+	exposer.reset();
 	return 0;
 }

@@ -1,16 +1,19 @@
 #pragma once
 #ifdef HWGAUGE_USE_INTEL_PCM
-#include "CPUCollector.hpp"
+#include "CPUMetrics.hpp"
 #include <string>
 #include <vector>
 #include <memory>
 #include <chrono>
+#include <map>
 
-namespace pcm {
+namespace pcm
+{
     class PCM;
     class SystemCounterState;
     class SocketCounterState;
 }
+
 
 namespace hwgauge {
 
@@ -28,7 +31,7 @@ namespace hwgauge {
         std::string name() { return "PCM CPU Collector"; }
 
         std::vector<CPULabel>   labels();
-        std::vector<CPUMetrics> sample();
+        std::vector<CPUMetrics> sample(std::vector<CPULabel>&labels);
 
     private:
         bool initialized{ false };
@@ -39,10 +42,20 @@ namespace hwgauge {
 
         std::chrono::steady_clock::time_point beforeTime;
 
+        // socket -> temp_input 路径
+        std::map<uint32_t, std::string> socketPaths;
+
         void initializePCM();
         void cleanupPCM();
 
+        int zeroBandwidthCounter;
+        void resetPCM();
+
         void snapshot(std::vector<pcm::SocketCounterState>& out);
+
+        // ===== 新增：温度相关 =====
+        void initTempSensors();
+        double readTemp(uint32_t socketId);
     };
 
 } // namespace hwgauge

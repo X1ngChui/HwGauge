@@ -1,0 +1,127 @@
+---
+- name: 批量部署 HwGauge 与 HwLoad (Tmux 托管)
+  hosts: cluster
+  gather_facts: yes
+
+  vars:
+    # --- HwGauge 配置 ---
+    gauge_dir: "/users/xc/HwGauge/build"
+    master_ip: "{{ hostvars[groups['master'][0]].ansible_host }}"
+    node_name: "{{ inventory_hostname | replace('-', '_') }}"
+    password:  "WaflT3NHu3dooAt"
+    gauge_log: "hwgauge.log"
+    
+    # --- HwLoad 配置 ---
+    load_dir: "/users/xc/HwLoad/build"
+    load_cmd: "./loadgen cpu:random"
+    
+    # --- 日志回传配置 ---
+    local_log_path: "./ansible_error_logs"
+
+  tasks:
+    # 0. 环境准备
+    - name: 确保安装了 tmux
+      become: yes
+      package:
+        name: tmux
+        state: present
+
+    # 1. 清理工作 (清理旧日志和旧的 Tmux 会话)
+    - name: 清理旧环境
+      become: yes
+      shell: |
+        # 尝试杀死名为 hw_monitor 和 hw_load 的 tmux 会话
+        tmux kill-session -t hw_monitor 2>/dev/null || true
+        tmux kill-session -t hw_load 2>/dev/null || true
+        # 删除旧日志
+        rm -f {{ gauge_dir }}/{{ gauge_log }}
+      ignore_errors: yes
+
+    # 2. 启动 HwGauge (在 Tmux 中)
+    - name: "启动 HwGauge 采集服务 (Tmux: hw_monitor)"
+      become: yes
+      shell: >
+        tmux new-session -d -s hw_monitor -c {{ gauge_dir }}
+        "
+        ./bin/hwgauge
+        --interval=1
+        --sysInfo=true
+        --clusterInfo=false
+        --outTer=false
+        --db-enable=true
+        --db-host='{{ master_ip }}'
+        --db-table='{{ node_name }}'
+        --db-password='{{ password }}'
+        > {{ gauge_log }} 2>&1
+        "
+      # 注：上面的 > {{ gauge_log }} 是为了让原来的报错检查逻辑还能复用日志文件
+
+    # 3. 启动 HwLoad (在 Tmux 中)
+    - name: "启动 HwLoad 负载生成 (Tmux: hw_load)"
+      become: yes
+      shell: >
+        tmux new-session -d -s hw_load -c {{ load_dir }}
+        "{{ load_cmd }}"
+
+    - name: 等待进程初始化
+      pause:
+        seconds: 3
+
+    # 4. 检查 HwGauge 是否存活
+    - name: "检查 HwGauge 进程存活"
+      become: yes
+      shell: "pgrep -x hwgauge"
+      register: gauge_check
+      ignore_errors: yes
+      changed_when: false
+
+    # 5. 检查 LoadGen 是否存活 (假设二进制名字叫 loadgen)
+    - name: "检查 LoadGen 进程存活"
+      become: yes
+      shell: "pgrep -x loadgen"
+      register: load_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: 判定运行状态
+      set_fact:
+        gauge_running: "{{ gauge_check.rc == 0 }}"
+        load_running: "{{ load_check.rc == 0 }}"
+
+    # --- 错误处理区 (保留了你原来的逻辑，主要针对 Gauge) ---
+
+    - name: "(远程) 读取 HwGauge 启动日志"
+      when: not gauge_running
+      become: yes
+      shell: "cat {{ gauge_dir }}/{{ gauge_log }} 2>/dev/null || echo '日志文件不存在'"
+      register: log_output
+      ignore_errors: yes
+
+    - name: "(主节点) 创建日志目录"
+      delegate_to: localhost
+      run_once: yes
+      file: 
+        path: "{{ local_log_path }}" 
+        state: directory 
+        mode: '0755'
+      when: not gauge_running or not load_running
+
+    - name: "(主节点) 保存错误报告"
+      when: not gauge_running or not load_running
+      delegate_to: localhost
+      copy:
+        content: |
+          主机: {{ inventory_hostname }}
+          HwGauge 状态: {{ '运行中' if gauge_running else '启动失败' }}
+          HwLoad 状态: {{ '运行中' if load_running else '启动失败' }}
+          
+          若 HwGauge 失败，日志如下:
+          --------------------------
+          {{ log_output.stdout | default('无日志') }}
+          --------------------------
+        dest: "{{ local_log_path }}/error_{{ inventory_hostname }}.txt"
+
+    - name: "报错并中断任务"
+      fail:
+        msg: "节点 {{ inventory_hostname }} 启动异常！请查看 logs"
+      when: not gauge_running or not load_running
