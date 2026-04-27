@@ -13,7 +13,7 @@
 namespace hwgauge {
 	class Exposer {
 	public:
-		Exposer(std::string address, std::chrono::seconds interval) :
+		Exposer(std::string address, std::chrono::milliseconds interval) :
 			exposer(std::move(address)), registry(std::make_shared<Registry>()), interval(interval) {}
 
 		template<typename T, typename... Args>
@@ -30,7 +30,7 @@ namespace hwgauge {
 		std::shared_ptr<Registry> registry;
 
 		std::atomic<bool> running = false;
-		std::chrono::seconds interval;
+		std::chrono::milliseconds interval;
 		std::vector<std::unique_ptr<Collector>> collectors;
 	};
 }

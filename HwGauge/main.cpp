@@ -39,20 +39,38 @@ int main(int argc, char* argv[]) {
 		->default_val(default_address);
 
 	// Command-line arguments: interval
-	constexpr int default_interval = 1;
-	int interval_seconds = default_interval;
-	application.add_option("-i,--interval", interval_seconds, "Collection interval in seconds")
+	constexpr int default_interval = 100;
+	int interval_milliseconds = default_interval;
+	application.add_option("-i,--interval", interval_seconds, "Collection interval in milliseconds")
 		->default_val(default_interval)
 		->check(CLI::PositiveNumber);
 
 	CLI11_PARSE(application, argc, argv);
 
+	// Command-line arguments: log level
+	spdlog::level::level_enum log_level = spdlog::level::info;
+	std::map<std::string, spdlog::level::level_enum> level_map{
+		{"trace", spdlog::level::trace},
+		{"debug", spdlog::level::debug},
+		{"info", spdlog::level::info},
+		{"warn", spdlog::level::warn},
+		{"err", spdlog::level::err},
+		{"critical", spdlog::level::critical},
+		{"off", spdlog::level::off}
+	};
+	application.add_option("-l,--level", log_level, "Set log level")
+		->transform(CLI::CheckedTransformer(level_map, CLI::ignore_case))
+		->default_val(spdlog::level::info);
+
+	CLI11_PARSE(application, argc, argv);
+
 	// Initialize spdlog logger
-	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");
+	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");]
+	spdlog::set_level(log_level);
 	spdlog::info("Spdlog initialized successfully");
 
 	// Create Prometheus exposer
-	exposer = std::make_unique<hwgauge::Exposer>(address, std::chrono::seconds(interval_seconds));
+	exposer = std::make_unique<hwgauge::Exposer>(address, std::chrono::milliseconds(interval_milliseconds));
 	std::signal(SIGINT, signal_handler);
 
 #ifdef HWGAUGE_USE_NVML

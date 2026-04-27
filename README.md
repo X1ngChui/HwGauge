@@ -88,12 +88,12 @@ sudo bin/hwgauge [OPTIONS]
 | Option           | Description                 | Default          |
 | ---------------- | --------------------------- | ---------------- |
 | `-a, --address`  | HTTP exposer bind address   | `127.0.0.1:8000` |
-| `-i, --interval` | Sampling interval (seconds) | `1`              |
+| `-i, --interval` | Sampling interval (miliseconds) | `100`        |
 
 **Example**
 
 ```bash
-sudo bin/hwgauge --address 0.0.0.0:8080 --interval 2
+sudo bin/hwgauge --address 0.0.0.0:8080 --interval 200
 ```
 
 ---
