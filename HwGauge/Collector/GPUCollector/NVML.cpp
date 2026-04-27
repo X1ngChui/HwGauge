@@ -2,6 +2,7 @@
 #include "NVML.hpp"
 #include <nvml.h>
 #include <array>
+#include <cstdlib>
 
 namespace hwgauge {
 	NVML::NVML()
@@ -17,7 +18,7 @@ namespace hwgauge {
 			nvmlReturn_t status = nvmlShutdown();
 
 			if (status != NVML_SUCCESS) {
-				throw std::runtime_error("NVML shutdown failed");
+				std::exit(EXIT_FAILURE);
 			}
 		}
 	}

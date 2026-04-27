@@ -89,11 +89,12 @@ sudo bin/hwgauge [OPTIONS]
 | ---------------- | --------------------------- | ---------------- |
 | `-a, --address`  | HTTP exposer bind address   | `127.0.0.1:8000` |
 | `-i, --interval` | Sampling interval (miliseconds) | `100`        |
+| '-l,--level'     | Set log level (trace, debug, info, warn, error) | `info` |
 
 **Example**
 
 ```bash
-sudo bin/hwgauge --address 0.0.0.0:8080 --interval 200
+sudo bin/hwgauge --address 0.0.0.0:8080 --interval 200 --level debug
 ```
 
 ---

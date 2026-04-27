@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 	// Command-line arguments: interval
 	constexpr int default_interval = 100;
 	int interval_milliseconds = default_interval;
-	application.add_option("-i,--interval", interval_seconds, "Collection interval in milliseconds")
+	application.add_option("-i,--interval", interval_milliseconds, "Collection interval in milliseconds")
 		->default_val(default_interval)
 		->check(CLI::PositiveNumber);
 
