@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 	CLI11_PARSE(application, argc, argv);
 
 	// Initialize spdlog logger
-	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");]
+	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [tid %t] %v");
 	spdlog::set_level(log_level);
 	spdlog::info("Spdlog initialized successfully");
 
