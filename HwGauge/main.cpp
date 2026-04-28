@@ -45,8 +45,6 @@ int main(int argc, char* argv[]) {
 		->default_val(default_interval)
 		->check(CLI::PositiveNumber);
 
-	CLI11_PARSE(application, argc, argv);
-
 	// Command-line arguments: log level
 	spdlog::level::level_enum log_level = spdlog::level::info;
 	std::map<std::string, spdlog::level::level_enum> level_map{
